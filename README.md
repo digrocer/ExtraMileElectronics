@@ -7,6 +7,7 @@ Self-service electronics storefront for Accra, Ghana, plus a native back-office 
 - **`packages/core`** — DB types, Zod schemas, money/pricing helpers, order state machine, query builders. No `next/*`, no Node-only APIs — runs in the webview too.
 - **`packages/ui`** — shared shadcn components + design tokens.
 - **`supabase`** — migrations, seed, Edge Functions.
+- **`deploy`** — hosting configs for the web app: [`deploy/vercel`](./deploy/vercel) and [`deploy/netlify`](./deploy/netlify) (see [`deploy/README.md`](./deploy/README.md)).
 
 ## Non-negotiable rules
 

@@ -1,0 +1,2 @@
+# The desktop app never ships to Vercel — only the apps/web storefront does.
+apps/desktop

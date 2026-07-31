@@ -1,0 +1,15 @@
+# Netlify build for the ExtraMile web storefront (apps/web).
+# Runs from the repo root so pnpm can resolve the workspace packages
+# (@extramile/core, @extramile/ui) that apps/web depends on.
+
+[build]
+  command = "pnpm install --frozen-lockfile && pnpm --filter @extramile/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "9.15.0"
+
+# Next.js on Netlify needs the official runtime plugin (SSR, image opt, headers).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
