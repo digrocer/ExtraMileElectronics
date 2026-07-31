@@ -22,15 +22,40 @@ export async function deviceId(): Promise<string> {
   return invoke<string>('device_id');
 }
 
-export async function openExternal(url: string): Promise<void> {
-  if (!isTauri) {
-    window.open(url, '_blank');
-    return;
-  }
-  await invoke('open_external', { url });
+// ── PIN vault (docs/07 §5) — the desktop's only login. ───────────────────────
+// In a plain browser (vite dev) the vault is unavailable, so these degrade to a
+// no-op "dev" session that lets the UI render without Tauri.
+export async function pinStatus(): Promise<boolean> {
+  if (!isTauri) return false;
+  return invoke<boolean>('pin_status');
 }
 
-/** Blocks in Rust until the loopback listener on :1421 receives ?code=…, then returns it. */
-export async function oauthListen(): Promise<string> {
-  return invoke<string>('oauth_listen');
+/** Seal the freshly obtained refresh token under a new 6-digit PIN (enrolment). */
+export async function pinEnroll(pin: string, refreshToken: string): Promise<void> {
+  if (!isTauri) return;
+  await invoke('pin_enroll', { pin, refreshToken });
+}
+
+/** Unlock with the PIN; returns the stored refresh token. Throws on wrong PIN. */
+export async function pinUnlock(pin: string): Promise<string> {
+  if (!isTauri) throw new Error('pin_unavailable');
+  return invoke<string>('pin_unlock', { pin });
+}
+
+/** Persist a rotated refresh token using the cached session key (no PIN prompt). */
+export async function sessionReseal(refreshToken: string): Promise<void> {
+  if (!isTauri) return;
+  await invoke('session_reseal', { refreshToken });
+}
+
+/** Drop the cached key so the next use requires the PIN (idle lock). */
+export async function pinLock(): Promise<void> {
+  if (!isTauri) return;
+  await invoke('pin_lock');
+}
+
+/** Forget this device: clear the vault and require full re-enrolment. */
+export async function pinReset(): Promise<void> {
+  if (!isTauri) return;
+  await invoke('pin_reset');
 }
