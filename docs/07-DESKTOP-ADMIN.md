@@ -62,8 +62,9 @@ Not in v1: multi-store/branch, purchase orders to suppliers, cash-drawer/shift r
 | No privileged secrets in the binary | Only `SUPABASE_URL` + `anon` key are compiled in. `service_role` and `PAYSTACK_SECRET_KEY` never leave the server. CI greps the built MSI/NSIS payload for both patterns and fails the build. |
 | Authorization | Staff user session + existing RLS (`is_staff()`). The desktop app has **no** extra database power over the web admin. |
 | Privileged actions | Edge Function `admin-actions` — verifies the caller's JWT, re-checks `role` server-side, then acts with `service_role`. Covers: refund, role change, staff invite, coupon over a value threshold, stock adjust > 10 units. |
-| Token storage | Access token in memory only. Refresh token in **Windows Credential Manager** via the Rust `keyring` crate — never `localStorage`, never a plaintext file. |
-| Session lifetime | 12h; then full re-auth. Idle lock after 15 min requiring password/PIN re-entry (shared counter PC). |
+| Token storage | Access token in memory only. Refresh token sealed with **AES-256-GCM** under a key derived from the 6-digit PIN (Argon2id) and stored in **Windows Credential Manager** via the Rust `keyring` crate — never `localStorage`, never a plaintext file. |
+| Login | No OAuth in the desktop. The device is bound once to a real admin account (enrolment, §8), then a local **6-digit PIN** unlocks the sealed session on every launch. 10 wrong PINs wipe the vault → re-enrolment. |
+| Session lifetime | Idle lock after 15 min drops the live session; PIN re-entry restores it (shared counter PC). |
 | Tauri ACL (v2) | Capabilities scoped per window; only the plugins listed in §6 permitted. `withGlobalTauri: false`. Devtools disabled in release. |
 | CSP | `default-src 'self'; connect-src 'self' https://<ref>.supabase.co https://api.paystack.co; img-src 'self' data: https://<ref>.supabase.co; script-src 'self'` |
 | Code signing | Authenticode (Azure Trusted Signing or EV cert) — unsigned installers trip SmartScreen and staff will click through warnings, which is worse. |
@@ -73,14 +74,22 @@ Not in v1: multi-store/branch, purchase orders to suppliers, cash-drawer/shift r
 
 ## 6. Rust command surface (`src-tauri`)
 
-Plugins: `sql` (SQLite), `fs` (scoped to a chosen export dir), `dialog`, `os`, `process`, `single-instance`, `updater`, `notification`, `deep-link` (or loopback, §8), `serialport` (optional scanners).
+Plugins: `sql` (SQLite), `fs` (scoped to a chosen export dir), `dialog`, `os`, `process`, `single-instance`, `updater`, `notification`, `serialport` (optional scanners). No `opener`/`deep-link` — the desktop has no OAuth (§8).
 
 ```rust
-// auth / secrets
+// secrets
 secure_set(key: String, value: String) -> Result<()>          // keyring
 secure_get(key: String) -> Result<Option<String>>
 secure_clear(key: String) -> Result<()>
 device_id() -> String                                          // stable machine hash
+
+// PIN vault (§8) — the desktop's only login
+pin_status() -> Result<bool>                                   // is this device enrolled?
+pin_enroll(pin: String, refresh_token: String) -> Result<()>  // seal the token under a new PIN
+pin_unlock(pin: String) -> Result<String>                      // returns the sealed refresh token
+session_reseal(refresh_token: String) -> Result<()>            // persist a rotated token (cached key)
+pin_lock() -> ()                                               // drop the cached key (idle lock)
+pin_reset() -> Result<()>                                      // forget device → re-enrolment
 
 // printing (escpos)
 list_printers() -> Vec<PrinterInfo>
@@ -103,7 +112,6 @@ cache_query(sql: String, args: Vec<Value>) -> Result<Vec<Value>>  // read-only, 
 
 // misc
 check_update() -> Option<UpdateInfo>
-open_external(url: String) -> Result<()>                         // allowlist: paystack.com, supabase.co
 ```
 
 Rules: every command returns `Result` with a typed error enum surfaced as a toast — no `unwrap()` in a command body. Commands touching the filesystem validate the path is inside the configured export directory.
@@ -118,17 +126,24 @@ Rules: every command returns `Result` with a typed error enum surfaced as a toas
 
 ## 8. Authentication flow (desktop)
 
-Loopback, not a custom scheme — Google is happier with it and no OS registration is needed:
+No OAuth and no daily password. The device is bound once, then a 6-digit PIN is the only credential.
 
-1. Rust starts a one-shot HTTP listener on `http://localhost:1421/callback` (random free port fallback).
-2. Webview calls `signInWithOAuth({ provider: 'google', options: { redirectTo: 'http://localhost:1421/callback', skipBrowserRedirect: true } })` and opens the returned URL in the **system browser** (not the webview — Google blocks embedded webviews).
-3. Supabase redirects back with `?code=…`; the listener captures it, hands it to the webview, which calls `exchangeCodeForSession` (PKCE verifier stayed in the app).
-4. Refresh token → `secure_set` → Credential Manager. Access token in memory.
-5. `is_staff()` checked server-side; non-staff sees "this account has no back-office access" and is signed out.
+**Enrolment (first run, one-time):**
 
-Email + password is the offline-tolerant fallback and must stay enabled for the counter account.
+1. Admin signs in once with an admin email + password to obtain a Supabase session (the only time a password is entered on the desktop).
+2. `is_staff()` is checked server-side; a non-staff account is rejected with "this account has no back-office access" and nothing is stored.
+3. Admin chooses a 6-digit PIN. `pin_enroll` derives an AES-256-GCM key from the PIN (Argon2id + random salt) and seals the refresh token into Credential Manager. The derived key is cached in memory for the session.
 
-**Add to Supabase → Redirect URLs:** `http://localhost:1421/callback` (and the fallback port range if used). Update `05-OAUTH.md` §2.
+**Daily unlock:**
+
+1. Admin enters the PIN → `pin_unlock` decrypts and returns the sealed refresh token (GCM tag authenticates the PIN — a wrong PIN fails to decrypt).
+2. Webview calls `refreshSession({ refresh_token })` → live session with a full admin JWT. `is_staff()` is re-checked.
+3. Supabase rotates the refresh token on every refresh; `session_reseal` re-writes the vault with the cached key (no PIN prompt).
+4. 10 consecutive wrong PINs wipe the vault; the device must be re-enrolled.
+
+The restored session carries the same JWT the web admin uses, so the desktop's authority is identical — every capability is still gated by RLS `is_staff()` and the `admin-actions` Edge Function. The PIN is a **local** unlock, not a new server credential.
+
+There are no OAuth redirect URLs to register for the desktop.
 
 ## 9. Migration 008 (delta to `02-DATA-MODEL.md`)
 
@@ -192,11 +207,12 @@ D-10 | ESC/POS receipt output | GHS totals, order number, Paystack ref, warranty
 D-11 | Code128 label scans back to the same SKU | round-trip via handheld scanner |
 D-12 | HID scanner input into the serial field | captured without keystroke loss at scanner speed; 15-digit IMEI validated (Luhn) |
 D-13 | CSV import of 5k rows | parity with the web importer, same validation errors, memory stable |
-D-14 | Idle 15 min | app locks, requires re-auth, no data visible in a screenshot |
+D-14 | Idle 15 min | app locks, requires PIN re-entry, no data visible in a screenshot |
+D-14b | 10 consecutive wrong PINs | vault wiped, device returns to enrolment, no session recoverable |
 D-15 | Device revoked by admin | next token refresh signs the device out |
 D-16 | Walk-in offline sale then sync | real order number issued, stock correct, receipt reprint prompted |
 D-17 | Clock skew ±10 min on the counter PC | JWT still validates; timestamps recorded server-side |
-D-18 | Fresh install on clean Windows 11 | no SmartScreen block (signed), first-run OAuth works, printer discovery works |
+D-18 | Fresh install on clean Windows 11 | no SmartScreen block (signed), first-run enrolment + PIN works, printer discovery works |
 
 ## 12. Build prompts (append to `06-BUILD-PROMPTS.md`)
 
@@ -218,13 +234,14 @@ Done when: pnpm build, pnpm test, tsc --noEmit pass, and apps/web behaves identi
 Scaffold apps/desktop with Tauri v2 + Vite + React 19 + TS strict + TanStack Query/Router,
 consuming packages/core and packages/ui.
 
-Implement per docs/07-DESKTOP-ADMIN.md §5, §6 (auth/secrets commands), §8:
+Implement per docs/07-DESKTOP-ADMIN.md §5, §6 (secrets + PIN-vault commands), §8:
 - Rust commands secure_set/secure_get/secure_clear using the keyring crate, and device_id.
-- Loopback OAuth: one-shot listener on localhost:1421, system-browser sign-in, PKCE exchange
-  in the webview, refresh token to Credential Manager, access token in memory only.
-- Email+password fallback.
-- Post-login is_staff() gate; non-staff is signed out with a clear message.
-- Idle lock after 15 minutes.
+- PIN vault: pin_status/pin_enroll/pin_unlock/session_reseal/pin_lock/pin_reset. The refresh
+  token is sealed with AES-256-GCM under an Argon2id key derived from a 6-digit PIN, stored in
+  Credential Manager; access token in memory only. 10 wrong PINs wipe the vault.
+- Enrolment binds a real admin account once (email+password), then PIN-only thereafter. No OAuth.
+- is_staff() gate at enrolment and unlock; non-staff is rejected with a clear message.
+- Idle lock after 15 minutes drops the live session; PIN restores it.
 - Tauri v2 capabilities file permitting only the plugins listed in §6; CSP from §5;
   withGlobalTauri false; devtools disabled in release.
 - Compile in only SUPABASE_URL and the anon key. Add a CI step that greps the build output

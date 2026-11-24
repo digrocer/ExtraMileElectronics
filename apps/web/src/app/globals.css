@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Storefront theme — iOS-flavoured overrides of the shared tokens.
+ * Scoped to apps/web so the desktop back-office keeps the shared palette.
+ * Doubled :root out-ranks tokens.css regardless of stylesheet order.
+ */
+:root:root {
+  --background: 240 20% 97%; /* systemGroupedBackground */
+  --foreground: 240 6% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 6% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 6% 10%;
+  --primary: 211 100% 50%; /* systemBlue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 6% 92%;
+  --secondary-foreground: 240 6% 10%;
+  --muted: 240 6% 94%;
+  --muted-foreground: 240 4% 46%;
+  /* shadcn "accent" = subtle hover fill; brand orange is used explicitly (#FF9500). */
+  --accent: 240 6% 94%;
+  --accent-foreground: 240 6% 10%;
+  --destructive: 3 100% 59%; /* systemRed */
+  --success: 135 59% 49%; /* systemGreen */
+  --border: 240 6% 88%;
+  --input: 240 6% 88%;
+  --ring: 211 100% 50%;
+  --radius: 0.875rem;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -9,14 +38,78 @@
   body {
     @apply bg-background text-foreground;
     font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      'Segoe UI',
-      Roboto,
-      Helvetica,
-      Arial,
-      sans-serif;
+      -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-inter), 'Segoe UI', Roboto,
+      Helvetica, Arial, sans-serif;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.022em;
+  }
+}
+
+@layer components {
+  /* Frosted "material" surface, as used by iOS bars and sheets. */
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl backdrop-saturate-150;
+  }
+  /* Subtle press feedback. */
+  .pressable {
+    @apply transition-transform duration-200 ease-out active:scale-[0.98];
+  }
+
+  /* Card surface on the grey page background. */
+  .panel {
+    @apply rounded-2xl bg-card p-5 sm:p-6;
+  }
+  /* Filled text field: tinted at rest, white with a focus ring when active. */
+  .field {
+    @apply h-11 w-full rounded-xl bg-black/[0.045] px-3.5 text-[15px] text-foreground transition-shadow placeholder:text-muted-foreground focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted-foreground;
+  }
+  /* Shared selector rather than chained @apply — Tailwind can't nest variant-bearing classes. */
+  .btn,
+  .btn-primary,
+  .btn-tinted {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition duration-200 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  .btn-tinted {
+    @apply bg-primary/10 text-primary hover:bg-primary/15;
+  }
+  .btn-sm {
+    @apply h-9 px-4 text-sm;
+  }
+  /* Card list with hairline dividers between rows. */
+  .grouped {
+    @apply overflow-hidden rounded-2xl bg-card;
+  }
+  .grouped > * + * {
+    border-top: 1px solid rgb(0 0 0 / 0.06);
+  }
+  .large-title {
+    @apply text-3xl font-semibold;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable {
+    @apply transition-none active:scale-100;
   }
 }

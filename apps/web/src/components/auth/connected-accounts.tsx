@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@extramile/ui';
 import type { UserIdentity } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -70,36 +69,34 @@ export function ConnectedAccounts() {
         </p>
       )}
 
-      <ul className="divide-y rounded-md border">
+      <ul className="grouped">
         {identities.map((identity) => (
-          <li key={identity.identity_id} className="flex items-center justify-between p-3">
-            <span className="text-sm capitalize">{identity.provider}</span>
-            <Button
+          <li key={identity.identity_id} className="flex items-center justify-between px-4 py-3">
+            <span className="text-[17px] capitalize">{identity.provider}</span>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
+              className="text-[15px] font-medium text-destructive disabled:opacity-30"
               disabled={identities.length <= 1}
               onClick={() => unlink(identity)}
             >
               Remove
-            </Button>
+            </button>
           </li>
         ))}
       </ul>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Add a sign-in method</p>
+        <p className="field-label">Add a sign-in method</p>
         <div className="flex gap-2">
           {LINKABLE.filter((p) => !linkedProviders.has(p.provider)).map((p) => (
-            <Button
+            <button
               key={p.provider}
               type="button"
-              variant="outline"
-              size="sm"
+              className="btn-tinted btn-sm"
               onClick={() => link(p.provider)}
             >
               Link {p.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>

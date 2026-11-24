@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
             {stats.lowStock.map((v) => (
               <li key={v.sku} className="flex justify-between p-3">
                 <span>{v.sku}</span>
-                <span className={v.available <= 0 ? 'text-destructive' : 'text-accent'}>
+                <span className={v.available <= 0 ? 'text-destructive' : 'text-[#C26A00]'}>
                   {v.available} left
                 </span>
               </li>

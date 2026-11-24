@@ -2,7 +2,7 @@ import type { Database } from '@extramile/core';
 import { createClient } from '@supabase/supabase-js';
 
 // In-memory session storage — the access token never touches disk (docs/07 §5).
-// The refresh token is separately mirrored to the OS keychain by AuthProvider.
+// The refresh token is sealed under the PIN in the OS keychain by AuthProvider.
 const mem = new Map<string, string>();
 const memoryStorage = {
   getItem: (k: string) => mem.get(k) ?? null,
@@ -19,7 +19,6 @@ export const supabase = createClient<Database>(
   import.meta.env.VITE_SUPABASE_ANON_KEY,
   {
     auth: {
-      flowType: 'pkce',
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
@@ -27,5 +26,3 @@ export const supabase = createClient<Database>(
     },
   },
 );
-
-export const REDIRECT_URI = 'http://localhost:1421/callback';

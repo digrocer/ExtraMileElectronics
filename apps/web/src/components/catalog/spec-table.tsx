@@ -5,7 +5,8 @@ function humanize(key: string): string {
     .replace(/\bIn\b/, '(in)')
     .replace(/\bMah\b/, '(mAh)')
     .replace(/\bGb\b/i, 'GB')
-    .replace(/\bMp\b/, 'MP');
+    .replace(/\bMp\b/, 'MP')
+    .replace(/\b(Anc|Hdr|Os|Ram|Cpu|Gpu)\b/g, (w) => w.toUpperCase());
 }
 
 function displayValue(value: unknown): string {
@@ -13,7 +14,7 @@ function displayValue(value: unknown): string {
   return String(value);
 }
 
-/** Spec table rendered from the category's spec_schema key order, falling back to the raw specs. */
+/** Spec list rendered from the category's spec_schema key order, falling back to the raw specs. */
 export function SpecTable({
   specs,
   schema,
@@ -25,20 +26,21 @@ export function SpecTable({
   const rows = keys.filter((k) => specs[k] !== undefined && specs[k] !== null && specs[k] !== '');
   if (rows.length === 0) return null;
 
+  // iOS inset grouped list: label left, value right, hairlines inset from the leading edge.
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <tbody className="divide-y">
-          {rows.map((k) => (
-            <tr key={k}>
-              <th scope="row" className="py-2 pr-4 text-left font-medium text-muted-foreground">
-                {humanize(k)}
-              </th>
-              <td className="py-2">{displayValue(specs[k])}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <dl className="overflow-hidden rounded-2xl bg-card text-[15px]">
+      {rows.map((k, i) => (
+        <div key={k} className="flex items-center justify-between gap-4 pl-4">
+          <div
+            className={`flex flex-1 items-center justify-between gap-4 py-3 pr-4 ${
+              i > 0 ? 'border-t border-black/[0.06]' : ''
+            }`}
+          >
+            <dt className="text-muted-foreground">{humanize(k)}</dt>
+            <dd className="text-right font-medium">{displayValue(specs[k])}</dd>
+          </div>
+        </div>
+      ))}
+    </dl>
   );
 }

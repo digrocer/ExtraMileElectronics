@@ -3,13 +3,26 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { ProductCard } from '@/components/catalog/product-card';
+import { Breadcrumbs } from '@/components/catalog/breadcrumbs';
+import { ProductGrid } from '@/components/catalog/product-grid';
 import { SpecTable } from '@/components/catalog/spec-table';
 import { VariantSelector } from '@/components/catalog/variant-selector';
+import {
+  demoCatalogEnabled,
+  demoListProducts,
+  demoProductDetail,
+  isDemoId,
+} from '@/lib/catalog/demo';
 import { getProductBySlug, getRelatedProducts } from '@/lib/catalog/queries';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const revalidate = 300;
+
+async function loadProduct(slug: string) {
+  const product = await getProductBySlug(slug).catch(() => null);
+  if (product || !demoCatalogEnabled) return product;
+  return demoProductDetail(slug);
+}
 
 /** Prerender active product pages at build; unknown slugs still render on-demand. */
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -32,7 +45,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await loadProduct(slug);
   if (!product) return { title: 'Not found' };
   const image = product.images.find((i) => i.url)?.url ?? undefined;
   return {
@@ -45,10 +58,16 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await loadProduct(slug);
   if (!product) notFound();
 
-  const related = product.category ? await getRelatedProducts(product.category.id, product.id) : [];
+  const related = !product.category
+    ? []
+    : isDemoId(product.id)
+      ? demoListProducts({ categoryId: product.category.id, sort: 'rating' })
+          .items.filter((p) => p.id !== product.id)
+          .slice(0, 4)
+      : await getRelatedProducts(product.category.id, product.id);
 
   const prices = product.variants.map((v) => v.price);
   const low = prices.length ? Math.min(...prices) : 0;
@@ -103,7 +122,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   };
 
   return (
-    <main className="container py-8">
+    <main className="container pb-20 pt-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -113,53 +132,50 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
-      <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:underline">
-          Home
-        </Link>{' '}
-        /{' '}
-        {product.category && (
-          <>
-            <Link href={`/c/${product.category.slug}`} className="hover:underline">
-              {product.category.name}
-            </Link>{' '}
-            /{' '}
-          </>
+      <Breadcrumbs
+        trail={[
+          { label: 'Home', href: '/' },
+          ...(product.category
+            ? [{ label: product.category.name, href: `/c/${product.category.slug}` }]
+            : []),
+          { label: product.title },
+        ]}
+      />
+
+      <Suspense fallback={<div className="aspect-square animate-pulse rounded-2xl bg-muted" />}>
+        <VariantSelector product={product} />
+      </Suspense>
+
+      <div className="mt-14 grid gap-8 md:grid-cols-2 md:gap-12">
+        {product.description && (
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold">Overview</h2>
+            <p className="whitespace-pre-line text-[17px] leading-relaxed text-muted-foreground">
+              {product.description}
+            </p>
+          </section>
         )}
-        <span className="text-foreground">{product.title}</span>
-      </nav>
 
-      <div className="space-y-4">
-        {product.brand && <p className="text-sm text-muted-foreground">{product.brand.name}</p>}
-        <h1 className="text-3xl font-bold tracking-tight">{product.title}</h1>
-      </div>
-
-      <div className="mt-8">
-        <Suspense fallback={<div className="h-96 animate-pulse rounded-lg bg-muted" />}>
-          <VariantSelector product={product} />
-        </Suspense>
-      </div>
-
-      {product.description && (
-        <section className="mt-12 max-w-prose">
-          <h2 className="mb-3 text-xl font-semibold">Overview</h2>
-          <p className="whitespace-pre-line text-muted-foreground">{product.description}</p>
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Tech specs</h2>
+          <SpecTable specs={product.specs} schema={product.category?.specSchema ?? {}} />
         </section>
-      )}
-
-      <section className="mt-12 max-w-2xl">
-        <h2 className="mb-3 text-xl font-semibold">Specifications</h2>
-        <SpecTable specs={product.specs} schema={product.category?.specSchema ?? {}} />
-      </section>
+      </div>
 
       {related.length > 0 && (
-        <section className="mt-16">
-          <h2 className="mb-4 text-xl font-semibold">Related products</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+        <section className="mt-16 space-y-4">
+          <div className="flex items-end justify-between">
+            <h2 className="text-xl font-semibold">You might also like</h2>
+            {product.category && (
+              <Link
+                href={`/c/${product.category.slug}`}
+                className="text-[15px] font-medium text-primary"
+              >
+                See all
+              </Link>
+            )}
           </div>
+          <ProductGrid items={related} />
         </section>
       )}
     </main>

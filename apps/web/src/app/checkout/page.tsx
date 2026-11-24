@@ -32,8 +32,8 @@ export default async function CheckoutPage() {
   }
 
   return (
-    <main className="container max-w-5xl space-y-6 py-10">
-      <h1 className="text-2xl font-semibold">Checkout</h1>
+    <main className="container max-w-5xl pb-20 pt-6">
+      <h1 className="large-title mb-6">Checkout</h1>
       <CheckoutForm
         zones={zones}
         addresses={addresses}

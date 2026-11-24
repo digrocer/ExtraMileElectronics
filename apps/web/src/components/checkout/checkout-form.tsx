@@ -1,7 +1,7 @@
 'use client';
 
 import { formatGHS } from '@extramile/core';
-import { Button } from '@extramile/ui';
+import { Lock, MapPin, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { quoteAction } from '@/lib/checkout/actions';
@@ -18,8 +18,14 @@ export interface AddressView {
   landmark: string | null;
 }
 
-const input =
-  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+function SectionTitle({ icon: Icon, children }: { icon: typeof User; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+      <Icon className="size-5 text-muted-foreground" aria-hidden />
+      {children}
+    </h2>
+  );
+}
 
 export function CheckoutForm({
   zones,
@@ -159,27 +165,29 @@ export function CheckoutForm({
   const selectedZone = zones.find((z) => z.id === zoneId);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-      <div className="space-y-8">
+    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="space-y-6">
         {/* Contact */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Contact</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm">
-              <span>Email</span>
+        <section className="panel">
+          <SectionTitle icon={User}>Contact</SectionTitle>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label>
+              <span className="field-label">Email</span>
               <input
                 type="email"
-                className={input}
+                autoComplete="email"
+                className="field"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </label>
-            <label className="space-y-1 text-sm">
-              <span>Phone (MoMo)</span>
+            <label>
+              <span className="field-label">Phone (MoMo)</span>
               <input
                 type="tel"
+                autoComplete="tel"
                 placeholder="0244 123 456"
-                className={input}
+                className="field"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
@@ -188,14 +196,14 @@ export function CheckoutForm({
         </section>
 
         {/* Delivery */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Delivery</h2>
+        <section className="panel space-y-4">
+          <SectionTitle icon={MapPin}>Delivery</SectionTitle>
 
           {addresses.length > 0 && (
-            <label className="space-y-1 text-sm">
-              <span>Use a saved address</span>
+            <label className="block">
+              <span className="field-label">Use a saved address</span>
               <select
-                className={input}
+                className="field"
                 defaultValue=""
                 onChange={(e) => pickAddress(e.target.value)}
               >
@@ -213,97 +221,125 @@ export function CheckoutForm({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <input
-              className={input}
+              className="field"
               placeholder="Recipient name"
+              autoComplete="name"
               value={addr.recipient}
               onChange={(e) => setAddr({ ...addr, recipient: e.target.value })}
             />
             <input
-              className={input}
+              className="field"
               placeholder="Recipient phone"
               value={addr.phone}
               onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
             />
             <input
-              className={`${input} sm:col-span-2`}
+              className="field sm:col-span-2"
               placeholder="Address line 1"
+              autoComplete="address-line1"
               value={addr.line1}
               onChange={(e) => setAddr({ ...addr, line1: e.target.value })}
             />
             <input
-              className={`${input} sm:col-span-2`}
+              className="field sm:col-span-2"
               placeholder="Address line 2 (optional)"
+              autoComplete="address-line2"
               value={addr.line2}
               onChange={(e) => setAddr({ ...addr, line2: e.target.value })}
             />
             <input
-              className={input}
+              className="field"
               placeholder="City / town"
               value={addr.city}
               onChange={(e) => setAddr({ ...addr, city: e.target.value })}
             />
             <input
-              className={input}
+              className="field"
               placeholder="Region"
               value={addr.region}
               onChange={(e) => setAddr({ ...addr, region: e.target.value })}
             />
             <input
-              className={`${input} sm:col-span-2`}
+              className="field sm:col-span-2"
               placeholder="Landmark (optional)"
               value={addr.landmark}
               onChange={(e) => setAddr({ ...addr, landmark: e.target.value })}
             />
           </div>
 
-          <label className="space-y-1 text-sm">
-            <span>Delivery zone</span>
-            <select className={input} value={zoneId} onChange={(e) => onZoneChange(e.target.value)}>
-              {zones.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.name} — {z.baseFee === 0 ? 'Free' : formatGHS(z.baseFee)} ({z.etaMin}–
-                  {z.etaMax} days)
-                </option>
-              ))}
-            </select>
-          </label>
+          <fieldset>
+            <legend className="field-label">Delivery zone</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {zones.map((z) => {
+                const active = z.id === zoneId;
+                return (
+                  <button
+                    key={z.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onZoneChange(z.id)}
+                    className={`pressable rounded-2xl px-4 py-3 text-left transition-shadow ${
+                      active
+                        ? 'bg-primary/[0.06] ring-2 ring-primary'
+                        : 'bg-black/[0.03] ring-1 ring-black/[0.06] hover:ring-black/15'
+                    }`}
+                  >
+                    <span className="flex justify-between gap-2 text-[15px] font-medium">
+                      {z.name}
+                      <span>{z.baseFee === 0 ? 'Free' : formatGHS(z.baseFee)}</span>
+                    </span>
+                    <span className="block text-[13px] text-muted-foreground">
+                      {z.etaMin}–{z.etaMax} days
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
         </section>
       </div>
 
       {/* Summary */}
-      <aside className="h-fit space-y-4 rounded-lg border p-5 lg:sticky lg:top-20">
-        <h2 className="text-lg font-semibold">Order summary</h2>
+      <aside className="panel h-fit space-y-5 lg:sticky lg:top-20">
+        <h2 className="text-xl font-bold">Order summary</h2>
 
         <div className="space-y-2">
           <div className="flex gap-2">
             <input
-              className={input}
-              placeholder="Coupon code"
+              className="field uppercase placeholder:normal-case"
+              placeholder="Discount code"
               value={couponInput}
               onChange={(e) => setCouponInput(e.target.value)}
               disabled={Boolean(appliedCoupon)}
             />
             {appliedCoupon ? (
-              <Button type="button" variant="outline" onClick={removeCoupon}>
+              <button type="button" className="btn-tinted btn-sm h-11" onClick={removeCoupon}>
                 Remove
-              </Button>
+              </button>
             ) : (
-              <Button type="button" variant="outline" onClick={applyCoupon} disabled={refreshing}>
+              <button
+                type="button"
+                className="btn-tinted btn-sm h-11"
+                onClick={applyCoupon}
+                disabled={refreshing}
+              >
                 Apply
-              </Button>
+              </button>
             )}
           </div>
-          {appliedCoupon && <p className="text-xs text-success">Applied {appliedCoupon}.</p>}
-          {quote.couponError && <p className="text-xs text-destructive">{quote.couponError}</p>}
+          {appliedCoupon && <p className="text-[13px] text-success">Applied {appliedCoupon}.</p>}
+          {quote.couponError && <p className="text-[13px] text-destructive">{quote.couponError}</p>}
         </div>
 
-        <dl className="space-y-1 text-sm">
+        <dl
+          className={`space-y-2 text-[15px] transition-opacity ${refreshing ? 'opacity-50' : ''}`}
+        >
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Subtotal ({quote.itemCount})</dt>
             <dd>{formatGHS(quote.subtotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Shipping</dt>
+            <dt className="text-muted-foreground">Delivery</dt>
             <dd>{quote.shipping === 0 ? 'Free' : formatGHS(quote.shipping)}</dd>
           </div>
           {quote.discount > 0 && (
@@ -312,24 +348,37 @@ export function CheckoutForm({
               <dd>−{formatGHS(quote.discount)}</dd>
             </div>
           )}
-          <div className="flex justify-between border-t pt-2 text-base font-semibold">
+          <div className="flex justify-between border-t border-black/[0.06] pt-3 text-[17px] font-bold">
             <dt>Total</dt>
             <dd>{formatGHS(quote.total)}</dd>
           </div>
           {selectedZone && (
-            <p className="pt-1 text-xs text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               Arrives in {selectedZone.etaMin}–{selectedZone.etaMax} days.
             </p>
           )}
         </dl>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl bg-destructive/10 px-3 py-2 text-[13px] text-destructive"
+          >
+            {error}
+          </p>
+        )}
 
-        <Button className="w-full" size="lg" onClick={placeOrder} disabled={placing || refreshing}>
+        <button
+          type="button"
+          className="btn-primary w-full"
+          onClick={placeOrder}
+          disabled={placing || refreshing}
+        >
+          <Lock className="size-4" aria-hidden />
           {placing ? 'Placing order…' : `Pay ${formatGHS(quote.total)}`}
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          You&apos;ll pay securely via Paystack (mobile money, card, bank).
+        </button>
+        <p className="text-center text-[13px] text-muted-foreground">
+          Pay securely via Paystack — mobile money, card or bank.
         </p>
       </aside>
     </div>

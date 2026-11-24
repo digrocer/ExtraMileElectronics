@@ -1,12 +1,10 @@
 'use client';
 
-import { Button } from '@extramile/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-const inputClass =
-  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const inputClass = 'field';
 
 /** Email OTP (magic link) + email/password fallback. docs/05-OAUTH.md §1. */
 export function EmailAuthForm({ next = '/' }: { next?: string }) {
@@ -56,8 +54,8 @@ export function EmailAuthForm({ next = '/' }: { next?: string }) {
 
   return (
     <form className="space-y-3" onSubmit={signInPassword}>
-      <div className="space-y-1">
-        <label htmlFor="email" className="text-sm font-medium">
+      <div>
+        <label htmlFor="email" className="field-label">
           Email
         </label>
         <input
@@ -70,8 +68,8 @@ export function EmailAuthForm({ next = '/' }: { next?: string }) {
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-sm font-medium">
+      <div>
+        <label htmlFor="password" className="field-label">
           Password
         </label>
         <input
@@ -85,24 +83,23 @@ export function EmailAuthForm({ next = '/' }: { next?: string }) {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-[13px] text-destructive">
           {error}
         </p>
       )}
-      {notice && <p className="text-sm text-success">{notice}</p>}
+      {notice && <p className="text-[13px] text-success">{notice}</p>}
 
-      <Button type="submit" className="w-full" disabled={busy || !email}>
+      <button type="submit" className="btn-primary w-full" disabled={busy || !email}>
         {busy ? 'Working…' : 'Sign in'}
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        variant="ghost"
-        className="w-full"
+        className="btn w-full text-[15px] text-primary hover:bg-primary/5"
         disabled={busy || !email}
         onClick={sendMagicLink}
       >
         Email me a magic link instead
-      </Button>
+      </button>
     </form>
   );
 }

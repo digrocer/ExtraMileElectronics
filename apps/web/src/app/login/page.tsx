@@ -20,33 +20,36 @@ export default async function LoginPage({
   const errorMessage = params.error ? (ERRORS[params.error] ?? 'Something went wrong.') : null;
 
   return (
-    <main className="container flex min-h-dvh items-center justify-center py-12">
-      <div className="w-full max-w-sm space-y-6 rounded-lg border bg-card p-6 shadow-sm">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold">Welcome back</h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in to track orders and check out faster.
-          </p>
+    <main className="container flex min-h-[calc(100dvh-3.5rem)] items-center justify-center py-12">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="space-y-3 text-center">
+          <span className="mx-auto flex size-16 items-center justify-center rounded-xl bg-foreground text-2xl font-bold text-background">
+            E
+          </span>
+          <h1 className="text-2xl font-semibold">Sign in</h1>
+          <p className="text-[15px] text-muted-foreground">Track orders and check out faster.</p>
         </div>
 
-        {errorMessage && (
-          <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {errorMessage}
-          </p>
-        )}
+        <div className="panel space-y-5">
+          {errorMessage && (
+            <p
+              role="alert"
+              className="rounded-xl bg-destructive/10 px-3 py-2 text-[13px] text-destructive"
+            >
+              {errorMessage}
+            </p>
+          )}
 
-        <OAuthButtons next={next} />
+          <OAuthButtons next={next} />
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
+          <div className="flex items-center gap-3 text-[13px] text-muted-foreground">
+            <span className="h-px flex-1 bg-black/[0.08]" />
+            or
+            <span className="h-px flex-1 bg-black/[0.08]" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">or</span>
-          </div>
+
+          <EmailAuthForm next={next} />
         </div>
-
-        <EmailAuthForm next={next} />
       </div>
     </main>
   );

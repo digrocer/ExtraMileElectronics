@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><filter id="s" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#1c1c1e" flood-opacity=".22"/></filter>
+<linearGradient id="w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#30D158"/><stop offset=".5" stop-color="#64D2FF"/><stop offset="1" stop-color="#0A84FF"/></linearGradient>
+<linearGradient id="al" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e5ea"/><stop offset="1" stop-color="#aeaeb2"/></linearGradient></defs>
+<g filter="url(#s)"><rect x="76" y="92" width="248" height="166" rx="14" fill="#1c1c1e"/>
+<rect x="85" y="101" width="230" height="148" rx="7" fill="url(#w)"/><rect x="186" y="101" width="28" height="7" rx="3.5" fill="#1c1c1e"/>
+<path d="M85 205 Q160 160 230 196 T315 180 V242 a7 7 0 0 1 -7 7 H92 a7 7 0 0 1 -7 -7z" fill="#fff" fill-opacity=".2"/>
+<path d="M44 258 H356 L349 274 a10 10 0 0 1 -9 6 H60 a10 10 0 0 1 -9 -6z" fill="url(#al)"/><rect x="170" y="258" width="60" height="6" rx="3" fill="#8e8e93"/></g></svg>

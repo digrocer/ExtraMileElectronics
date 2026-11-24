@@ -1,0 +1,20 @@
+# Only the web app and the workspace packages it builds from are needed on Vercel.
+# Leading "/" anchors to the repo root (apps/web/src/lib/supabase must still upload).
+node_modules
+**/node_modules
+.next
+**/.next
+/.git
+/.claude
+/.husky
+/apps/desktop
+/supabase
+/docs
+/files
+/files1
+/load
+/scripts
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example

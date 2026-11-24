@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@extramile/ui';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -31,24 +30,22 @@ export function OAuthButtons({ next = '/' }: { next?: string }) {
 
   return (
     <div className="space-y-3">
-      <Button
+      <button
         type="button"
-        variant="outline"
-        className="w-full"
+        className="btn w-full bg-card text-[15px] text-foreground ring-1 ring-black/10 hover:bg-black/[0.03]"
         disabled={busy !== null}
         onClick={() => signIn('google')}
       >
         {busy === 'google' ? 'Redirecting…' : 'Continue with Google'}
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        variant="outline"
-        className="w-full"
+        className="btn w-full bg-foreground text-[15px] text-background hover:bg-foreground/90"
         disabled={busy !== null}
         onClick={() => signIn('apple')}
       >
         {busy === 'apple' ? 'Redirecting…' : 'Continue with Apple'}
-      </Button>
+      </button>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
